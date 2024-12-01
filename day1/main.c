@@ -70,7 +70,7 @@ long int similarity(t_node *h_left, t_node *h_right){
     return score;
 }
 
-void main(int argc, char *argv[]){
+void main(){
     
     char* buf = malloc(100);
     t_node *t_left_list;
