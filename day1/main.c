@@ -1,123 +1,154 @@
+/*
+ * Day 1 of the Advent of Code 2024
+ * Author: Grga Palcic
+ *
+ * Constructs two lists of integers baased on data from a file, sorts them,
+ * and computes the 'distance' and 'similarity score' between the lists.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
-typedef struct s_node{
+typedef struct node_s {
     int data;
-    struct s_node *next;
-} t_node;
+    struct node_s *next;
+} node_t;
 
-//function to sort the list
-t_node* sort(t_node* head){
-    t_node *current = head;
-    t_node *index = NULL;
-    int temp;
-    
-    if(head == NULL){
-        return head;
-    }else{
-        while(current != NULL){
-            index = current->next;
-            
-            while(index != NULL){
-                if(current->data > index->data){
-                    temp = current->data;
-                    current->data = index->data;
-                    index->data = temp;
-                }
-                index = index->next;
-            }
-            current = current->next;
-        }
+/* just freeing memory allocated for a linked list */
+void free_list(node_t *head)
+{
+    while(head){
+        node_t *tmp = head;
+        head = head->next;
+        free(tmp);
     }
-    return head;
-
 }
 
-long int distance (t_node *h_left, t_node *h_right){
+/* create new node so i dont repeat myself */
+static node_t* new_node(int data)
+{
+    node_t *new_node = malloc(sizeof(node_t));
+    if (!new_node)
+        return NULL;
+        
+    new_node->data = data;
+    new_node->next = NULL;
+    return new_node;
+}
 
-    t_node* t_left = h_left;
-    t_node* t_right = h_right;
+/* sorts a linked list in ascending order */
+static node_t *sort(node_t* head)
+{
+    node_t *outer, *inner;
+    int temp;
+    
+    if (!head)
+        return head;
+
+    for (outer = head; outer->next; outer = outer->next) {
+        for (inner = outer->next; inner; inner = inner->next) {
+            if (outer->data > inner->data) {
+                temp = outer->data;
+                outer->data = inner->data;
+                inner->data = temp;
+            }
+        }
+    }
+
+    return head;
+}
+
+/* computes abs distance (difference) between two linked lists */
+static long int distance (node_t *left_head, node_t *right_head)
+{
+    node_t *tmp_left = left_head;
+    node_t *tmp_right = right_head;
     long int diff = 0;
     
-    while(t_left != NULL && t_right != NULL){
-        diff += abs(t_left->data - t_right->data);
-        //printf("Diff: %d\n", diff);
-        t_left = t_left->next;
-        t_right = t_right->next;
+    while (tmp_left && tmp_right) {
+        diff += labs(tmp_left->data - tmp_right->data);
+        tmp_left = tmp_left->next;
+        tmp_right = tmp_right->next;
     }
+
     return diff;
 }
 
-long int similarity(t_node *h_left, t_node *h_right){
-
-    t_node* t_left = h_left;
-    t_node* t_right = h_right;
+/* computes similarity score between two linked lists */
+static long int similarity(node_t *left_head, node_t *right_head)
+{
+    node_t *tmp_left, *tmp_right;
     long int score = 0;
     
-    while(t_left != NULL){
-        t_right = h_right;
+    for (tmp_left = left_head; tmp_left; tmp_left = tmp_left->next) {
         int count = 0;
-        while(t_right != NULL){
-            if(t_left->data == t_right->data){
+
+        for (tmp_right = right_head; tmp_right; tmp_right = tmp_right->next) {
+            if (tmp_left->data == tmp_right->data)
                 count++;
-            }
-            t_right = t_right->next;
         }
-        score += t_left->data * count;
-        t_left = t_left->next;
+
+        score += tmp_left->data * count;
     }
+
     return score;
 }
 
-void main(){
-    
-    char* buf = malloc(100);
-    t_node *t_left_list;
-    t_node *h_left_list;
-    t_node *t_right_list;
-    t_node *h_right_list;
-
-    FILE *f = fopen("data.in", "rw");
-
-    if(f == NULL){
-        printf("Error opening file\n");
-        return;
-    }
-
+int main(void)
+{    
+    node_t *left_tail = NULL;
+    node_t *left_head = NULL;
+    node_t *right_tail = NULL;
+    node_t *right_head = NULL;
     int a, b;
+    int first_read = 1;
 
-    if(fscanf(f, "%d %d", &a, &b) == 2){
-        //printf("Read from file: %d %d\n", a, b);
-        t_left_list = malloc(sizeof(t_node));
-        t_left_list->data = a;
-        t_left_list->next = NULL;
-        h_left_list = t_left_list;
-
-        t_right_list = malloc(sizeof(t_node));
-        t_right_list->data = b;
-        t_right_list->next = NULL;
-        h_right_list = t_right_list;
+    FILE *file = fopen("data.in", "r");
+    if (!file) {
+        fprintf(stderr, "Error: Unable to open file data.in\n");
+        return 1;
     }
 
-    while(fscanf(f, "%d %d", &a, &b) == 2){
-        //printf("Read from file: %d %d\n", a, b);
-        t_left_list->next = malloc(sizeof(t_node));
-        t_left_list = t_left_list->next;
-        t_left_list->data = a;
-        t_left_list->next = NULL;
-        
-        t_right_list->next = malloc(sizeof(t_node));
-        t_right_list = t_right_list->next;
-        t_right_list->data = b;
-        t_right_list->next = NULL;
+    while (fscanf(file, "%d %d", &a, &b) == 2) {
+        node_t *left_new = new_node(a);
+        node_t *right_new = new_node(b);
+        /* pretend to check if malloc failed */
+
+        if (first_read) {
+            left_head = left_new;
+            right_head = right_new;
+            left_tail = left_head;
+            right_tail = right_head;
+            first_read = 0;
+        } else {
+            left_tail->next = left_new;
+            left_tail = left_tail->next;
+
+            right_tail->next = right_new;
+            right_tail = right_tail->next;
+        }
     }
 
-    h_left_list = sort(h_left_list);
-    h_right_list = sort(h_right_list);
-    printf("Difference: %d\n", distance(h_left_list, h_right_list));
-    printf("Similarity: %d\n", similarity(h_left_list, h_right_list));
+    fclose(file);
 
-    
-    return;
+    /* is anything reda? */
+    if (first_read) {
+        fprintf(stderr, "Error: No data read from file\n");
+        return 1;
+    }
+
+    /* sort the lists */
+    left_head = sort(left_head);
+    right_head = sort(right_head);
+
+    /* compute and print results */
+    printf("Difference: %ld\n", distance(left_head, right_head));
+    printf("Similarity: %ld\n", similarity(left_head, right_head));
+
+    /* free the memory */
+    free_list(left_head);
+    free_list(right_head);
+
+    return 0;
 }
