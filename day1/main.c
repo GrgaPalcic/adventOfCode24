@@ -38,7 +38,7 @@ static node_t* new_node(int data)
 }
 
 /* sorts a linked list in ascending order..bubble, cpu go brrr */
-static node_t *sort(node_t* head)
+static node_t* sort(node_t* head)
 {
     node_t *outer, *inner;
     int temp;
@@ -46,7 +46,7 @@ static node_t *sort(node_t* head)
     if (!head)
         return head;
 
-    for (outer = head; outer->next; outer = outer->next) {
+    for (outer = head; outer; outer = outer->next) {
         for (inner = outer->next; inner; inner = inner->next) {
             if (outer->data > inner->data) {
                 temp = outer->data;
