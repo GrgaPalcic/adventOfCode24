@@ -37,7 +37,7 @@ static node_t* new_node(int data)
     return new_node;
 }
 
-/* sorts a linked list in ascending order */
+/* sorts a linked list in ascending order..bubble, cpu go brrr */
 static node_t *sort(node_t* head)
 {
     node_t *outer, *inner;
@@ -102,7 +102,6 @@ int main(void)
     node_t *right_tail = NULL;
     node_t *right_head = NULL;
     int a, b;
-    int first_read = 1;
 
     FILE *file = fopen("data.in", "r");
     if (!file) {
@@ -115,12 +114,11 @@ int main(void)
         node_t *right_new = new_node(b);
         /* pretend to check if malloc failed */
 
-        if (first_read) {
+        if (!left_head) {
             left_head = left_new;
             right_head = right_new;
             left_tail = left_head;
             right_tail = right_head;
-            first_read = 0;
         } else {
             left_tail->next = left_new;
             left_tail = left_tail->next;
@@ -133,7 +131,7 @@ int main(void)
     fclose(file);
 
     /* is anything reda? */
-    if (first_read) {
+    if (!left_head || !right_head) {
         fprintf(stderr, "Error: No data read from file\n");
         return 1;
     }
