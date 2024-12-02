@@ -3,3 +3,6 @@
 
 # Ignore all .exe files in all directories
 *.exe
+
+# Ingore all inputs
+data.in
