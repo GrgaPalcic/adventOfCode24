@@ -33,17 +33,17 @@ static int multiply(int a, int b)
 /* part 1 */
 static int parse_input(char *line)
 {
-    char *current = line;
+    char *processing = line;
     int a, b;
     int result = 0;
     
-    while ((current = strstr(current, "mul("))) {
+    while ((processing = strstr(processing, "mul("))) {
         char open_bracket, close_bracket, comma;
-        if (sscanf(current, "mul%c%d%c%d%c", &open_bracket, &a, &comma, &b, &close_bracket) == 5 && 
+        if (sscanf(processing, "mul%c%d%c%d%c", &open_bracket, &a, &comma, &b, &close_bracket) == 5 && 
             open_bracket == '(' && comma == ',' && close_bracket == ')') {
                 result += multiply(a, b);
         }
-        current++;
+        processing++;
     }
     return result;
 }
