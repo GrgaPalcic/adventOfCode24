@@ -28,9 +28,10 @@ void free_list(node_t *head)
 /* create new node so i dont repeat myself */
 static node_t* new_node(int data)
 {
-    node_t *new_node = malloc(sizeof(node_t));
-    if (!new_node)
+    node_t *new_node = (node_t*)malloc(sizeof(node_t));
+    if (!new_node) {
         return NULL;
+    }
         
     new_node->data = data;
     new_node->next = NULL;
@@ -43,8 +44,9 @@ static node_t* sort(node_t* head)
     node_t *outer, *inner;
     int temp;
     
-    if (!head)
+    if (!head) {
         return head;
+    }
 
     for (outer = head; outer; outer = outer->next) {
         for (inner = outer->next; inner; inner = inner->next) {
@@ -85,8 +87,9 @@ static long int similarity(node_t *left_head, node_t *right_head)
         int count = 0;
 
         for (tmp_right = right_head; tmp_right; tmp_right = tmp_right->next) {
-            if (tmp_left->data == tmp_right->data)
+            if (tmp_left->data == tmp_right->data) {
                 count++;
+            }
         }
 
         score += tmp_left->data * count;

@@ -31,9 +31,10 @@ void free_list(node_t *head)
 
 static node_t* new_node(int data)
 {
-    node_t *new_node = malloc(sizeof(node_t));
-    if (!new_node)
+    node_t *new_node = (node_t*)malloc(sizeof(node_t));
+    if (!new_node) {
         return NULL;
+    }
         
     new_node->data = data;
     new_node->next = NULL;
@@ -49,14 +50,17 @@ static int safety_check(node_t *head)
         int diff_decreasing = tmp_head->data - tmp_head->next->data;
         int diff_increasing = tmp_head->next->data - tmp_head->data;
         
-        if (diff_decreasing < 1 || diff_decreasing > 3)
+        if (diff_decreasing < 1 || diff_decreasing > 3) {
             decreasing = 1;
+        }
 
-        if (diff_increasing < 1 || diff_increasing > 3)
+        if (diff_increasing < 1 || diff_increasing > 3) {
             increasing = 1;
+        }
 
-        if (decreasing && increasing)
+        if (decreasing && increasing) {
             return UNSAFE;
+        }
         
         tmp_head = tmp_head->next;
     }
@@ -66,27 +70,31 @@ static int safety_check(node_t *head)
 
 static int dampened_safety_check(node_t *head)
 {
-    if (safety_check(head) == SAFE)
+    if (safety_check(head) == SAFE) {
         return SAFE;
+    }
 
     node_t *current = head;
     node_t *prev = NULL;
 
     while (current) {
-        if (prev)
+        if (prev) {
             prev->next = current->next;
-        else
+        } else {
             head = current->next;
+        }
 
         int safety = safety_check(head);
 
-        if (prev)
+        if (prev) {
             prev->next = current;
-        else
+        } else {
             head = current;
+        }
 
-        if (safety == SAFE)
+        if (safety == SAFE) {
             return SAFE;
+        }
 
         prev = current;
         current = current->next;
@@ -123,11 +131,13 @@ int main(void)
             }
         }
         
-        if (safety_check(head_of_levels))
+        if (safety_check(head_of_levels)) {
             number_of_safe_reports++;
+        }
 
-        if (dampened_safety_check(head_of_levels))
+        if (dampened_safety_check(head_of_levels)) {
             number_of_dampened_safe_reports++;
+        }
 
         free_list(head_of_levels);
     }
