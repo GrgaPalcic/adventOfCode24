@@ -1,5 +1,5 @@
 /*
- * Day 3 of the Advent of Code 2024
+ * Day 4 of the Advent of Code 2024
  * Author: Grga Palcic
  *
  * So, read data in a 2d array, and then check if the word XMAS is in any of the 8 directions from the current position.
@@ -101,6 +101,33 @@ static int x_mas_check(char matrix[MATRIX_ROWS][MATRIX_COLS], int row, int col, 
     return 0;
 }
 
+/* wrap em up */
+static int xmas(char matrix[MATRIX_ROWS][MATRIX_COLS], int row, int col)
+{
+    int count = 0;
+
+    for (int i = 0; i < row; i++) {
+        for (int j = 0; j < col; j++) {
+            count += xmas_check(matrix, row, col, "XMAS", i, j);
+        }
+    }
+
+    return count;
+}
+
+static int x_mas(char matrix[MATRIX_ROWS][MATRIX_COLS], int row, int col)
+{
+    int count = 0;
+
+    for (int i = 1; i < row - 1; i++) {
+        for (int j = 1; j < col - 1; j++) {
+            count += x_mas_check(matrix, row, col, i, j);
+        }
+    }
+
+    return count;
+}
+
 int main(void)
 {
     FILE *file = fopen(FILENAME, "r");
@@ -117,23 +144,8 @@ int main(void)
 
     fclose(file);
 
-    int xmas = 0;
-    int x_mas = 0;
-
-    for (int i = 0; i < MATRIX_ROWS; i++) {
-        for (int j = 0; j < MATRIX_COLS; j++) {
-            xmas += xmas_check(buffer, MATRIX_ROWS, MATRIX_COLS, "XMAS", i, j);
-        }
-    }
-
-    for (int i = 1; i < MATRIX_ROWS - 1; i++) {
-        for (int j = 1; j < MATRIX_COLS - 1; j++) {
-            x_mas += x_mas_check(buffer, MATRIX_ROWS, MATRIX_COLS, i, j);
-        }
-    }
-
-    printf("\nXMAS: %d\n", xmas);
-    printf("X-MAS: %d\n", x_mas);
+    printf("\nXMAS: %d\n", xmas(buffer, MATRIX_ROWS, MATRIX_COLS));
+    printf("X-MAS: %d\n", x_mas(buffer, MATRIX_ROWS, MATRIX_COLS));
 
     return 0;
 }
