@@ -20,7 +20,7 @@ typedef struct node_s {
 } node_t;
 
 
-void free_list(node_t *head)
+static void free_list(node_t *head)
 {
     while(head){
         node_t *tmp = head;
