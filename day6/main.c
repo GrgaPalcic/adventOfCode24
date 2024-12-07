@@ -20,63 +20,83 @@
     #define FILENAME "example.in"
 #endif
 
-static int xmas_check(char matrix[MATRIX_ROWS][MATRIX_COLS], int row, int col, char *str, int x_pos, int y_pos)
+typedef enum {
+    INVALID,
+    INITIAL,
+    VALID,
+    OBSTACLE,
+    VISITED
+} state_t;
+
+typedef struct {
+    int x;
+    int y;
+} coordinates_t;
+
+coordinates_t directions[] = { {-1, 0}, {0, 1}, {1, 0}, {0, -1} };
+
+static int is_valid_position(coordinates_t position)
 {
-    int str_len = strlen(str);
-    int count = 0;
-
-    for (int dir = 0; dir < 8; dir++) {
-        int x = x_pos;
-        int y = y_pos;
-        int char_count;
-        
-        for (char_count = 0; char_count < str_len; char_count++) {
-            if (x < 0 || x > row || y < 0 || y > col) {
-                break;
-            }
-
-            if (matrix[x][y] != str[char_count]) {
-                break;
-            }
-
-            x += directions[dir].x;
-            y += directions[dir].y;
-        }
-
-        if (char_count == str_len) {
-            count++;
-        }
-    }
-
-    return count;
+    return position.x >= 0 && position.x < MATRIX_ROWS && position.y >= 0 && position.y < MATRIX_COLS;
 }
 
-const int dx[] = {-1, -1, 1, 1};
-const int dy[] = {-1, 1, -1, 1};
-
-static int x_mas_check(char matrix[MATRIX_ROWS][MATRIX_COLS], int row, int col, int x_pos, int y_pos)
+static int check_position(char matrix[MATRIX_ROWS][MATRIX_COLS], coordinates_t position)
 {
-    int m_count = 0;
-    int s_count = 0;
-    direction_t m_pos[2];
+    if (!is_valid_position(position)) {
+        return INVALID;
+    } else if (matrix[position.x][position.y] == '.') {
+        return VALID;
+    } else if (matrix[position.x][position.y] == '^') {
+        return INITIAL;
+    } else if (matrix[position.x][position.y] == 'X') {
+        return VISITED;
+    } else {
+        return OBSTACLE;
+    }
+}
 
-    if (matrix[x_pos][y_pos] == 'A') {
-        for (int i = 0; i < 4; i++) {
-            if (matrix[x_pos + dx[i]][y_pos + dy[i]] == 'M') {
-                m_pos[m_count].x = dx[i];
-                m_pos[m_count].y = dy[i];
-                m_count++;
-            } else if (matrix[x_pos + dx[i]][y_pos + dy[i]] == 'S') {
-                s_count++;
-            }
+static void do_step(coordinates_t *position, coordinates_t dir)
+{
+    position->x += dir.x;
+    position->y += dir.y;
+}
+
+static void undo_step(coordinates_t *position, coordinates_t dir)
+{
+    position->x -= dir.x;
+    position->y -= dir.y;
+}
+
+static int count_positions(char matrix[MATRIX_ROWS][MATRIX_COLS], coordinates_t current_position)
+{
+    int dir = 0;
+    int unique_positions = 0;
+    state_t state;
+    coordinates_t position = current_position;
+    coordinates_t current_direction = directions[dir];
+
+    while (state = check_position(matrix, position)) {
+        switch (state) {
+            case VALID:
+            case INITIAL:
+                matrix[position.x][position.y] = 'X';
+                do_step(&position, current_direction);
+                unique_positions++;
+                break;
+            case OBSTACLE:
+                undo_step(&position, current_direction);
+                dir = (dir + 1) % 4;
+                current_direction = directions[dir];
+                break;
+            case VISITED:
+                do_step(&position, current_direction);
+                break;
+            case INVALID:
+                return unique_positions;
         }
     }
 
-    if (m_count == 2 && s_count == 2 && (m_pos[0].x * -1 != m_pos[1].x || m_pos[0].y * -1 != m_pos[1].y)) {
-        return 1;
-    }
-
-    return 0;
+    return unique_positions;
 }
 
 int main(void)
@@ -88,15 +108,20 @@ int main(void)
     }
 
     char buffer[MATRIX_ROWS][MATRIX_COLS];
+    coordinates_t position = {0, 0};
 
     for (int i = 0; i < MATRIX_ROWS; i++) {
         fgets(buffer[i], MATRIX_COLS+1, file);
+        for (int j = 0; j < MATRIX_COLS; j++) {
+            if (buffer[i][j] == '^') {
+                position = (coordinates_t){i, j};
+            }
+        }
     }
 
     fclose(file);
 
-    printf("\nXMAS: %d\n", xmas(buffer, MATRIX_ROWS, MATRIX_COLS));
-    printf("X-MAS: %d\n", x_mas(buffer, MATRIX_ROWS, MATRIX_COLS));
+    printf("\nUnique: %d\n", count_positions(buffer, position));
 
     return 0;
 }
