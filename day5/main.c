@@ -2,8 +2,8 @@
  * Day 5 of the Advent of Code 2024
  * Author: Grga Palcic
  *
- * Loaded all data into several linked lists, sorted pages and returned middle page from every 'update'.
- * Went overboard with pointers...no idea why
+ * Loaded rules in hash map and data into several linked lists, sorted pages using stdlib qsort,
+ * custom compare function, added middle page from every 'update'.
  * 
  */
 
@@ -11,109 +11,95 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define BUFFER_SIZE 100
 #define FULL_DATA
 
 #ifdef FULL_DATA
     #define FILENAME "data.in"
+    #define BUFFER_SIZE 128
+    #define HASH_MAP_SIZE 1181 /* prime number */
 #else
     #define FILENAME "example.in"
+    #define BUFFER_SIZE 128
+    #define HASH_MAP_SIZE 21
 #endif
 
-typedef struct generic_node_s{
-    void *data;
-    size_t size;
-    struct generic_node_s *next;
-} generic_node_t;
-
-static generic_node_t* new_generic_node(void *data, size_t data_size)
-{
-    generic_node_t *new_node = (generic_node_t*)calloc(1, sizeof(generic_node_t));
-    if (!new_node) {
-        return NULL;
-    }
-
-    new_node->data = malloc(data_size);
-    if (!new_node->data) {
-        free(new_node);
-        return NULL;
-    }
-
-    memcpy(new_node->data, data, data_size);
-    new_node->size = data_size;
-    new_node->next = NULL;
-
-    return new_node;
-}
-
-static void free_generic_list(generic_node_t *head)
-{
-    while(head){
-        generic_node_t *temp = head;
-        head = head->next;
-        free(temp->data);
-        free(temp); 
-    }
-}
+typedef struct hash_entry_s {
+    int key;
+    struct hash_entry_s* next;
+} hash_entry_t;
 
 typedef struct {
-    int pred;
-    int succ;
-} rule_pair_t;
+    hash_entry_t* entries[HASH_MAP_SIZE];
+} hash_map_t;
 
-/* compares two integers against rules, if found to deviate, return 1, otherwise return 0 */
-static int compare(int a, int b, generic_node_t *rules_list)
+static hash_map_t rules_map;
+
+static void hash_map_init(hash_map_t* map)
 {
-    generic_node_t *current = rules_list;
+    memset(map->entries, 0, sizeof(map->entries));
+}
+
+/* cantor pairing, providing unique key per pair */
+static int calculate_key(int pred, int succ)
+{
+    return (pred + succ) * (pred + succ + 1) / 2 + succ;
+}
+
+static void hash_map_insert(hash_map_t* map, int key)
+{
+    int index = key % HASH_MAP_SIZE;
+    hash_entry_t* new_entry = (hash_entry_t*)calloc(1, sizeof(hash_entry_t));
+    new_entry->key = key;
+    new_entry->next = map->entries[index];
+    map->entries[index] = new_entry;
+}
+
+static int hash_map_search(hash_map_t* map, int key)
+{
+    int index = key % HASH_MAP_SIZE;
+    hash_entry_t* current = map->entries[index];
+
     while (current) {
-        rule_pair_t *rule = (rule_pair_t*)current->data;
-        if (rule->pred == b && rule->succ == a) {
+        if (current->key == key) {
             return 1;
         }
         current = current->next;
     }
-
     return 0;
 }
 
-/* swaps data of two nodes */
-static void swap_nodes_data(generic_node_t *a, generic_node_t *b) {
-    void *temp = a->data;
-    a->data = b->data;
-    b->data = temp;
+static void free_hash_map(hash_map_t* map)
+{
+    for (int i = 0; i < HASH_MAP_SIZE; i++) {
+        hash_entry_t* current = map->entries[i];
+        while (current) {
+            hash_entry_t* temp = current;
+            current = current->next;
+            free(temp);
+        }
+        map->entries[i] = NULL;
+    }
 }
 
-/**
- * basic bubble sort on the updates list, uses custom compare function
- * return: pointer to the int array of size 2 containing the middle page of the sorted and unsorted list (after sorting)
- */
-static int* sort_pages(generic_node_t *updates, generic_node_t *rules_list)
+/* compares two integers against rules, if found to deviate, return 1, otherwise return -1 */
+static int compare(const void* a, const void* b)
 {
-    int is_sorted = 0;
-    int count = 0;
-    int *result = (int*)calloc(2, sizeof(int));
+    int int_a = *(int*)a;
+    int int_b = *(int*)b;
 
-    generic_node_t *outer_node, *inner_node;
-    for (outer_node = updates; outer_node; outer_node = outer_node->next) {
-        for (inner_node = outer_node->next; inner_node; inner_node = inner_node->next) {
-            int outer_val = *(int*)outer_node->data;
-            int inner_val = *(int*)inner_node->data;
+    int key = calculate_key(int_a, int_b); // Check if rule b -> a exists
+    return hash_map_search(&rules_map, key) ? -1 : 1;
+}
 
-            if (compare(outer_val, inner_val, rules_list)) {
-                swap_nodes_data(outer_node, inner_node);
-                is_sorted = 1;
-            }
+/* checks if the array is ordered */
+static int is_ordered(int* updates, int size, int (*comp)(const void*, const void*))
+{
+    for (int i = 0; i < size - 1; i++) {
+        if (comp(&updates[i], &updates[i+1]) == 1) {
+            return 0;
         }
-        count++;
     }
-
-    generic_node_t *current = updates;
-    for (int i = 0; i < count/2; i++) {
-        current = current->next;
-    }
-    result[is_sorted] = *(int*)(current->data);
-
-    return result;
+    return 1;
 }
 
 int main(void)
@@ -126,51 +112,50 @@ int main(void)
 
     char buffer[BUFFER_SIZE];
 
-    generic_node_t *rules = NULL;
-    generic_node_t *rules_tail = NULL;
+    hash_map_init(&rules_map);
 
     /* load rules */
     while (strcmp(fgets(buffer, BUFFER_SIZE, file), "\n")) {
-        rule_pair_t rule;
-        sscanf(buffer, "%d|%d", &rule.pred, &rule.succ);
-
-        if (!rules_tail) {
-            rules = new_generic_node(&rule, sizeof(rule_pair_t));
-            rules_tail = rules;
-        } else {
-            rules_tail->next = new_generic_node(&rule, sizeof(rule_pair_t));
-            rules_tail = rules_tail->next;
-        }
+        int pred, succ;
+        sscanf(buffer, "%d|%d", &pred, &succ);
+        hash_map_insert(&rules_map, calculate_key(pred, succ));
     }
 
-    int *result = NULL;
     int sorted_sum = 0;
     int unsorted_sum = 0;
 
     /* load update, proccess pages, add middle pages */
-    while (fgets(buffer, BUFFER_SIZE, file) != NULL) {
-        generic_node_t *updates = NULL;
-        generic_node_t *updates_tail = NULL;
+    while (fgets(buffer, BUFFER_SIZE, file)) {
+        char *temp = strdup(buffer);
+        int updates_size = 0;
+
+        /* count number of updates */
+        for (char *tok = strtok(temp, ","); tok; tok = strtok(NULL, ",")) {
+            updates_size++;
+        }
+
+        free(temp);
+
+        /* allocate array for updates */
+        int *updates = (int*)calloc(updates_size, sizeof(int));
+        int tmp_count = 0;
 
         for (char *tok = strtok(buffer, ","); tok; tok = strtok(NULL, ",")) {
-            int val = strtol(tok, NULL, 10);
-            if (!updates_tail) {
-                updates = new_generic_node(&val, sizeof(int));
-                updates_tail = updates;
-            } else {
-                updates_tail->next = new_generic_node(&val, sizeof(int));
-                updates_tail = updates_tail->next;
-                updates->size = updates_tail->size;
-            }
+            updates[tmp_count++] = strtol(tok, NULL, 10);
         }
         
-        result = sort_pages(updates, rules);
-        sorted_sum += result[0];
-        unsorted_sum += result[1];
-        free_generic_list(updates);
+        /* sort updates if not sorted and add middle value to the result */
+        if (!is_ordered(updates, updates_size, compare)) {
+            qsort(updates, updates_size, sizeof(int), compare);
+            unsorted_sum += updates[updates_size/2];
+        } else {
+            sorted_sum += updates[updates_size/2];
+        }
+
+        free(updates);
     }
-    
-    free_generic_list(rules);
+
+    free_hash_map(&rules_map);
     fclose(file);
 
     printf("\n");
